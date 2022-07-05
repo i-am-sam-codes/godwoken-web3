@@ -7,6 +7,7 @@ import {
   DBTransaction,
   DBLog,
 } from "./types";
+import "./knex";
 import Knex, { Knex as KnexType } from "knex";
 import { LogQueryOption } from "./types";
 import { envConfig } from "../base/env-config";
@@ -46,7 +47,8 @@ export class Query {
     const blockData = await this.knex<DBBlock>("blocks")
       .select("number")
       .orderBy("number", "desc")
-      .first();
+      .first()
+      .cache();
 
     return toBigIntOpt(blockData?.number);
   }
@@ -77,8 +79,10 @@ export class Query {
   private async getBlock(
     params: Readonly<Partial<KnexType.MaybeRawRecord<DBBlock>>>
   ): Promise<Block | undefined> {
-    const block = await this.knex<DBBlock>("blocks").where(params).first();
-
+    const block = await this.knex<DBBlock>("blocks")
+      .where(params)
+      .first()
+      .cache();
     if (!block) {
       return undefined;
     }
@@ -106,7 +110,8 @@ export class Query {
   ): Promise<Block[]> {
     const blocks = await this.knex<DBBlock>("blocks")
       .where("number", ">", number.toString())
-      .orderBy("number", order);
+      .orderBy("number", order)
+      .cache();
     return blocks.map((block) => formatBlock(block));
   }
 
@@ -123,9 +128,9 @@ export class Query {
   private async getTransactions(
     params: Readonly<Partial<KnexType.MaybeRawRecord<DBTransaction>>>
   ): Promise<Transaction[]> {
-    const transactions = await this.knex<DBTransaction>("transactions").where(
-      params
-    );
+    const transactions = await this.knex<DBTransaction>("transactions")
+      .where(params)
+      .cache();
 
     return transactions.map((tx) => formatTransaction(tx));
   }
@@ -169,7 +174,9 @@ export class Query {
   ): Promise<Transaction | undefined> {
     const transaction = await this.knex<DBTransaction>("transactions")
       .where(params)
-      .first();
+      .first()
+      // use cache only explicitly
+      .cache();
 
     if (transaction == null) {
       return undefined;
